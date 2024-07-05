@@ -50,6 +50,7 @@ fn pretty_print_expr(
     variables: &HashMap<String, i64>,
     expr_result: i64,
 ) -> String {
+    use tokenizer::Op;
     use tokenizer::Token::*;
     let mut result = String::new();
 
@@ -62,17 +63,17 @@ fn pretty_print_expr(
         match token {
             Number(n) => result.push_str(&n.to_string()),
             BinaryOp(op) => match op {
-                tokenizer::Op::Plus => result.push_str("+"),
-                tokenizer::Op::Minus => result.push_str("-"),
-                tokenizer::Op::Mult => result.push_str("*"),
-                tokenizer::Op::Div => result.push_str("/"),
-                tokenizer::Op::Pow => result.push_str("^"),
-                tokenizer::Op::Fact => result.push_str("!"),
+                Op::Plus => result.push_str("+"),
+                Op::Minus => result.push_str("-"),
+                Op::Mult => result.push_str("*"),
+                Op::Div => result.push_str("/"),
+                Op::Pow => result.push_str("^"),
+                Op::Fact => result.push_str("!"),
             },
             UnaryOp(op) => match op {
-                tokenizer::Op::Plus => result.push_str("+"),
-                tokenizer::Op::Minus => result.push_str("-"),
-                tokenizer::Op::Fact => result.push_str("!"),
+                Op::Plus => result.push_str("+"),
+                Op::Minus => result.push_str("-"),
+                Op::Fact => result.push_str("!"),
                 _ => panic!("Unexpected unary operator"),
             },
             LParen => result.push_str("("),

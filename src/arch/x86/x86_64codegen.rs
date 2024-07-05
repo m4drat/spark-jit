@@ -4,7 +4,7 @@ pub struct X86_64Codegen {
 
 #[allow(unused)]
 #[derive(Debug, Clone, Copy)]
-pub enum Register {
+pub enum Reg64 {
     Rax = 0,
     Rcx = 1,
     Rdx = 2,
@@ -27,7 +27,11 @@ pub enum Register {
 pub enum Operand {
     Reg(Register),
     Imm64(i64),
-    Mem(Register, i64),
+    Imm32(i32),
+    Imm16(i16),
+    Imm8(i8),
+    MemDisp(Register, i32),
+    MemAbs(Register),
 }
 
 enum ModRM {
@@ -40,18 +44,6 @@ enum ModRM {
 impl X86_64Codegen {
     pub fn new() -> Self {
         Self { code: Vec::new() }
-    }
-
-    fn emit8(&mut self, byte: u8) {
-        self.code.push(byte);
-    }
-
-    fn emit32(&mut self, dword: u32) {
-        self.code.extend_from_slice(&dword.to_le_bytes());
-    }
-
-    fn emit64(&mut self, qword: u64) {
-        self.code.extend_from_slice(&qword.to_le_bytes());
     }
 
     fn emit_rex_oi(&mut self, arg: Operand, w: u8) {
