@@ -35,6 +35,7 @@ const SYSTEMV_CALLING_CONV: [Reg64; 6] = [Rdi, Rsi, Rdx, Rcx, R8, R9];
 /// A JIT compiler for RPN expressions.
 ///
 /// Given an RPN expression, this compiler generates machine code that evaluates the expression.
+#[derive(Default)]
 pub struct Compiler {
     /// Mapping of variable names to their offsets in the variables area.
     variables_map: HashMap<String, usize>,

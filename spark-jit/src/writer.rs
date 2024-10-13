@@ -1,5 +1,6 @@
 
 /// Universal code writer.
+#[derive(Default)]
 pub struct Writer {
     buffer: Vec<u8>,
 }
@@ -19,6 +20,7 @@ macro_rules! define_emits {
 }
 
 /// Generic implementation of a code writer.
+#[allow(dead_code)]
 impl Writer {
     pub fn new() -> Self {
         Self {
@@ -33,13 +35,13 @@ impl Writer {
     /// Emit a sequence of optional bytes at the end of the buffer.
     fn emit_maybe(&mut self, bytes: &[Option<u8>]) {
         self.buffer.extend(
-            bytes.into_iter().flatten()
+            bytes.iter().flatten()
         );
     }
 
     /// Emit a byte sequence at the end of the buffer.
     fn emit(&mut self, bytes: &[u8]) {
-        self.buffer.extend_from_slice(&bytes);
+        self.buffer.extend_from_slice(bytes);
     }
 
     /// Emit a byte sequence at the specified position.

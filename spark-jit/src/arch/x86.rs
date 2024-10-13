@@ -1,5 +1,6 @@
 use crate::writer::Writer;
 
+#[derive(Default)]
 pub struct X86Asm {
     writer: Writer,
 }
@@ -36,6 +37,7 @@ pub enum Operand {
     MemAbs(Reg64),
 }
 
+#[allow(dead_code)]
 enum ModRM {
     Mem = 0b00,
     Reg = 0b11,
@@ -54,6 +56,7 @@ impl X86Asm {
         self.emit_rex_slash(arg, w);
     }
 
+    #[allow(clippy::identity_op)]
     fn emit_rex_slash(&mut self, arg: Operand, w: u8) {
         match arg {
             Operand::Reg(reg) | Operand::MemDisp(reg, _) => {
@@ -68,13 +71,11 @@ impl X86Asm {
         }
     }
 
+    #[allow(clippy::identity_op)]
     fn emit_rex_mr(&mut self, dst: Operand, src: Operand, w: u8) {
         match (dst, src) {
             (Operand::Reg(dst_reg), Operand::Reg(src_reg))
-                if (dst_reg as u8) < 8 && (src_reg as u8) < 8 && w == 0 =>
-            {
-                return;
-            }
+                if (dst_reg as u8) < 8 && (src_reg as u8) < 8 && w == 0 => {}
             (Operand::Reg(dst_reg), Operand::Reg(src_reg))
             | (Operand::MemDisp(dst_reg, _), Operand::Reg(src_reg)) => {
                 let is_b = (dst_reg as u8 >= 8) as u8;
@@ -86,13 +87,11 @@ impl X86Asm {
         };
     }
 
+    #[allow(clippy::identity_op)]
     fn emit_rex_rm(&mut self, dst: Operand, src: Operand, w: u8) {
         match (dst, src) {
             (Operand::Reg(dst_reg), Operand::Reg(src_reg))
-                if (dst_reg as u8) < 8 && (src_reg as u8) < 8 =>
-            {
-                return;
-            }
+                if (dst_reg as u8) < 8 && (src_reg as u8) < 8 => {}
             (Operand::Reg(dst_reg), Operand::Reg(src_reg))
             | (Operand::Reg(dst_reg), Operand::MemDisp(src_reg, _)) => {
                 let is_b = (src_reg as u8 >= 8) as u8;
@@ -176,7 +175,7 @@ impl X86Asm {
     }
 
     pub fn code(&self) -> &[u8] {
-        &self.writer.bytes()
+        self.writer.bytes()
     }
 
     pub fn neg(&mut self, dst: Operand) {

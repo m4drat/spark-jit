@@ -35,6 +35,7 @@ impl std::fmt::Display for TokenizerError {
     }
 }
 
+#[derive(Default)]
 pub struct Tokenizer {
     prev: Option<Token>,
     variables: HashSet<String>,

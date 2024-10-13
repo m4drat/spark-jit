@@ -88,7 +88,10 @@ impl Executable {
                     variables_area[*offset] = *value;
                 }
                 None => {
-                    println!("Skipping unknown variable: {}", name);
+                    eprintln!(
+                        "Variable with name {} was never used in the expression, skipping!",
+                        name
+                    );
                 }
             }
         }
