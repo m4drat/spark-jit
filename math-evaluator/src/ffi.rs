@@ -14,8 +14,11 @@ unsafe fn fill_error_buffer(output_error: *mut c_char, output_error_len: size_t,
         return;
     }
 
-    let output_error = std::slice::from_raw_parts_mut(output_error as *mut u8, output_error_len);
-    output_error[..output_error_len].copy_from_slice(error.as_bytes());
+    let output_error: &mut [u8] =
+        std::slice::from_raw_parts_mut(output_error as *mut u8, output_error_len);
+    // Zero-out the buffer
+    output_error.iter_mut().for_each(|b| *b = 0);
+    output_error[..error.len()].copy_from_slice(error.as_bytes());
 }
 
 /// Compile the expression and return the executable that can be used to evaluate it with the given variables.
@@ -33,16 +36,17 @@ unsafe fn fill_error_buffer(output_error: *mut c_char, output_error_len: size_t,
 /// # Safety
 ///
 /// The caller must ensure that the `output_error` buffer is valid and has the length of at least `output_error_len`.
+#[no_mangle]
 pub unsafe extern "C" fn compile_expression(
     input: *const c_char,
-    output_error: *mut c_char,
-    output_error_len: size_t,
+    error_msg: *mut c_char,
+    error_msg_max_len: size_t,
 ) -> *mut c_void {
     if input.is_null() {
         unsafe {
             fill_error_buffer(
-                output_error,
-                output_error_len,
+                error_msg,
+                error_msg_max_len,
                 "Invalid input string pointer!",
             );
         }
@@ -54,8 +58,8 @@ pub unsafe extern "C" fn compile_expression(
         Err(_) => {
             unsafe {
                 fill_error_buffer(
-                    output_error,
-                    output_error_len,
+                    error_msg,
+                    error_msg_max_len,
                     "Failed to convert the input string to a Rust string!",
                 )
             }
@@ -69,8 +73,8 @@ pub unsafe extern "C" fn compile_expression(
         Err(e) => {
             unsafe {
                 fill_error_buffer(
-                    output_error,
-                    output_error_len,
+                    error_msg,
+                    error_msg_max_len,
                     &format!("Failed to tokenize the input: {}", e),
                 );
             }
@@ -78,29 +82,29 @@ pub unsafe extern "C" fn compile_expression(
         }
     };
 
-    for variable in tokenizer.get_variables() {
-        if !KNOWN_VARIABLES.contains(&variable.as_str()) {
-            unsafe {
-                fill_error_buffer(
-                    output_error,
-                    output_error_len,
-                    &format!(
-                        "The input expression contains unknown variable: {}",
-                        variable
-                    ),
-                );
-            }
-            return std::ptr::null_mut();
-        }
-    }
+    // for variable in tokenizer.get_variables() {
+    //     if !KNOWN_VARIABLES.contains(&variable.as_str()) {
+    //         unsafe {
+    //             fill_error_buffer(
+    //                 error_msg,
+    //                 error_msg_max_len,
+    //                 &format!(
+    //                     "The input expression contains unknown variable: {}",
+    //                     variable
+    //                 ),
+    //             );
+    //         }
+    //         return std::ptr::null_mut();
+    //     }
+    // }
 
     let rpn = match rpn_converter::RpnConverter::convert(&tokens) {
         Ok(tokens) => tokens,
         Err(e) => {
             unsafe {
                 fill_error_buffer(
-                    output_error,
-                    output_error_len,
+                    error_msg,
+                    error_msg_max_len,
                     &format!("Failed to convert the input to RPN: {}", e),
                 );
             }
@@ -114,8 +118,8 @@ pub unsafe extern "C" fn compile_expression(
         Err(e) => {
             unsafe {
                 fill_error_buffer(
-                    output_error,
-                    output_error_len,
+                    error_msg,
+                    error_msg_max_len,
                     &format!("Failed to compile the RPN expression: {}", e),
                 );
             }
@@ -144,28 +148,25 @@ pub unsafe extern "C" fn compile_expression(
 /// # Safety
 ///
 /// The caller must ensure that the `exe` pointer is valid and was not freed before. The `keys_ptr` and `values_ptr` must be valid pointers to the arrays of the same length. The `output_error` buffer must be valid and have the length of at least `output_error_len`.
+#[no_mangle]
 pub unsafe extern "C" fn evaluate_expression(
     exe: *mut c_void,
-    keys_ptr: *const c_char,
+    keys_ptr: *const *const c_char,
     values_ptr: *const c_longlong,
     variables_len: size_t,
-    output_error: *mut c_char,
-    output_error_len: size_t,
+    error_msg: *mut c_char,
+    error_msg_max_len: size_t,
 ) -> c_longlong {
     if exe.is_null() {
         unsafe {
-            fill_error_buffer(
-                output_error,
-                output_error_len,
-                "Invalid executable pointer!",
-            );
+            fill_error_buffer(error_msg, error_msg_max_len, "Invalid executable pointer!");
         }
         return 0;
     }
 
     if keys_ptr.is_null() {
         unsafe {
-            fill_error_buffer(output_error, output_error_len, "Invalid variables pointer!");
+            fill_error_buffer(error_msg, error_msg_max_len, "Invalid variables pointer!");
         }
         return 0;
     }
@@ -173,10 +174,14 @@ pub unsafe extern "C" fn evaluate_expression(
     let keys = unsafe {
         std::slice::from_raw_parts(keys_ptr, variables_len)
             .iter()
-            .map(|key| std::ffi::CStr::from_ptr(key).to_str().unwrap())
-            .collect::<Vec<&str>>()
+            .map(|&ptr| {
+                std::ffi::CStr::from_ptr(ptr)
+                    .to_str()
+                    .expect("Failed to convert the variable name to a Rust string!")
+                    .to_string()
+            })
+            .collect::<Vec<String>>()
     };
-
     let values = unsafe { std::slice::from_raw_parts(values_ptr, variables_len) };
 
     let mut variables = HashMap::new();
@@ -190,8 +195,8 @@ pub unsafe extern "C" fn evaluate_expression(
         Err(e) => {
             unsafe {
                 fill_error_buffer(
-                    output_error,
-                    output_error_len,
+                    error_msg,
+                    error_msg_max_len,
                     &format!("Failed to evaluate the expression: {:?}", e),
                 );
             }
@@ -209,6 +214,7 @@ pub unsafe extern "C" fn evaluate_expression(
 /// # Safety
 ///
 /// The caller must ensure that the `exe` pointer is valid and was not freed before.
+#[no_mangle]
 pub unsafe extern "C" fn free_executable(exe: *mut c_void) {
     if exe.is_null() {
         return;

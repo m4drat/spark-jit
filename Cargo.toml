@@ -1,2 +1,6 @@
 [workspace]
+resolver = "2"
 members = ["spark-jit", "math-evaluator"]
+
+[profile.release]
+debug = true

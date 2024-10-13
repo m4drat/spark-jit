@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use super::mmap::GuardedMmap;
 
@@ -23,6 +23,7 @@ pub enum ExecutableError {
     CodeMemoryNotExecutable,
     EvalStackNotMmaped,
     UnknownVariable(String),
+    UnititializedVariable(String),
 }
 
 impl Executable {
@@ -80,12 +81,14 @@ impl Executable {
         };
 
         let mut variables_area = vec![0; self.variables_map.len()];
+        let mut initialized_variables: HashSet<String> = HashSet::new();
 
         // Prepare the variables area.
         for (name, value) in variables {
             match self.variables_map.get(name) {
                 Some(offset) => {
                     variables_area[*offset] = *value;
+                    initialized_variables.insert(name.clone());
                 }
                 None => {
                     eprintln!(
@@ -96,7 +99,12 @@ impl Executable {
             }
         }
 
-        // unsafe { libc::getchar() };
+        // Check if all variables were initialized.
+        for (name, _) in &self.variables_map {
+            if !initialized_variables.contains(name) {
+                return Err(ExecutableError::UnititializedVariable(name.clone()));
+            }
+        }
 
         let func: extern "C" fn(*mut i64, *const i64) -> i64 =
             unsafe { std::mem::transmute(code_map.ptr()) };
