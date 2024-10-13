@@ -1,9 +1,2 @@
-[package]
-name = "spark-jit"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-hex = "0.4.3"
-libc = "0.2.159"
-zydis = "4.1.1"
+[workspace]
+members = ["spark-jit", "math-evaluator"]

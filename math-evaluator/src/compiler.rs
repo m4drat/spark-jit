@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 
-use super::executable::Executable;
-use super::x86_64codegen::Register;
-use crate::jit::x86_64codegen::Operand::*;
-use crate::jit::x86_64codegen::Register::*;
-use crate::{
-    jit::x86_64codegen::{Operand, X86_64Codegen},
-    rpn_converter::RPNExpr,
-};
+use spark_jit::arch::x86::Operand;
+use spark_jit::arch::x86::Operand::{Imm64, MemDisp, Reg};
+use spark_jit::arch::x86::Reg64;
+use spark_jit::arch::x86::Reg64::*;
+use spark_jit::executable::Executable;
+use spark_jit::X86Asm;
+
+use crate::rpn_converter::RPNExpr;
 
 pub enum CompilerError {
     UnsupportedOp(crate::tokenizer::Op),
@@ -23,14 +23,14 @@ impl std::fmt::Display for CompilerError {
     }
 }
 
-const ARG1: Register = R8;
-const ARG2: Register = R9;
-const VARS_BASE: Register = R13;
-const EVAL_STACK: Register = R14;
-const SCRATCH_REG: Register = R15;
+const ARG1: Reg64 = R8;
+const ARG2: Reg64 = R9;
+const VARS_BASE: Reg64 = R13;
+const EVAL_STACK: Reg64 = R14;
+const SCRATCH_REG: Reg64 = R15;
 
 /// X86-64 calling convention: RDI, RSI, RDX, RCX, R8, R9, ... <stack>
-const SYSTEMV_CALLING_CONV: [Register; 6] = [Rdi, Rsi, Rdx, Rcx, R8, R9];
+const SYSTEMV_CALLING_CONV: [Reg64; 6] = [Rdi, Rsi, Rdx, Rcx, R8, R9];
 
 /// A JIT compiler for RPN expressions.
 ///
@@ -53,14 +53,14 @@ impl Compiler {
     ///
     /// * `codegen` - The code generator.
     /// * `op` - The operand to push onto the stack.
-    fn push_eval_stack(codegen: &mut X86_64Codegen, op: Operand) {
+    fn push_eval_stack(codegen: &mut X86Asm, op: Operand) {
         match op {
             // Support 64-bit immediate values
             Imm64(_) => {
                 codegen.mov(Reg(SCRATCH_REG), op);
-                codegen.mov(Mem(EVAL_STACK, 0), Reg(SCRATCH_REG))
+                codegen.mov(MemDisp(EVAL_STACK, 0), Reg(SCRATCH_REG))
             }
-            _ => codegen.mov(Mem(EVAL_STACK, 0), op),
+            _ => codegen.mov(MemDisp(EVAL_STACK, 0), op),
         }
 
         codegen.add(Reg(EVAL_STACK), Imm64(8));
@@ -72,13 +72,13 @@ impl Compiler {
     ///
     /// * `codegen` - The code generator.
     /// * `reg` - The register to pop the value into.
-    fn pop_eval_stack(codegen: &mut X86_64Codegen, reg: Register) {
+    fn pop_eval_stack(codegen: &mut X86Asm, reg: Reg64) {
         codegen.sub(Reg(EVAL_STACK), Imm64(8));
-        codegen.mov(Reg(reg), Mem(EVAL_STACK, 0));
+        codegen.mov(Reg(reg), MemDisp(EVAL_STACK, 0));
     }
 
     /// Compile the prologue of the generated code (save preserved registers).
-    fn compile_prologue(codegen: &mut X86_64Codegen) {
+    fn compile_prologue(codegen: &mut X86Asm) {
         // Save registers
         codegen.push(Reg(R12));
         codegen.push(Reg(R13));
@@ -91,7 +91,7 @@ impl Compiler {
     }
 
     /// Compile the epilogue of the generated code (restore preserved registers).
-    fn compile_epilogue(codegen: &mut X86_64Codegen) {
+    fn compile_epilogue(codegen: &mut X86Asm) {
         // Restore registers
         codegen.pop(Reg(Rsi));
         codegen.pop(Reg(Rdi));
@@ -112,7 +112,7 @@ impl Compiler {
     /// * `func` - Raw pointer to an ABI-compatible function.
     /// * `args` - The arguments to pass to the function.
     ///
-    fn compile_native_call(codegen: &mut X86_64Codegen, func: usize, args: &[Operand]) {
+    fn compile_native_call(codegen: &mut X86Asm, func: usize, args: &[Operand]) {
         if args.len() > SYSTEMV_CALLING_CONV.len() {
             unimplemented!("Too many arguments for a native call!");
         }
@@ -142,7 +142,7 @@ impl Compiler {
         use crate::tokenizer::Token::*;
 
         // We have the base address of our eval stack in RDI
-        let mut codegen = X86_64Codegen::new();
+        let mut codegen = X86Asm::new();
 
         Self::compile_prologue(&mut codegen);
 
@@ -161,7 +161,7 @@ impl Compiler {
 
                     codegen.mov(Reg(SCRATCH_REG), Reg(VARS_BASE));
                     codegen.add(Reg(SCRATCH_REG), Imm64(*offset as i64 * 8));
-                    codegen.mov(Reg(SCRATCH_REG), Mem(SCRATCH_REG, 0));
+                    codegen.mov(Reg(SCRATCH_REG), MemDisp(SCRATCH_REG, 0));
                     Self::push_eval_stack(&mut codegen, Reg(SCRATCH_REG));
                 }
                 Number(n) => {

@@ -1,49 +1,43 @@
 #![feature(extract_if)]
-#![feature(core_intrinsics)]
-
-mod jit;
-mod rpn_converter;
-mod rpn_evaluator;
-mod tokenizer;
 
 use std::{
     collections::HashMap,
     io::{self, Write},
 };
 
-use jit::compiler::Compiler;
-use rpn_converter::RpnConverter;
-use rpn_evaluator::RpnEvaluator;
-use tokenizer::Tokenizer;
+use math_evaluator::compiler::Compiler;
+use math_evaluator::rpn_converter::RpnConverter;
+use math_evaluator::rpn_evaluator::RpnEvaluator;
+use math_evaluator::tokenizer::{self, Tokenizer};
 
-fn sigfpe_handler(_sig: i32, info: *mut libc::siginfo_t, _ucontext: *mut libc::c_void) {
-    let info = unsafe { *info };
-    let code = info.si_code;
-    let addr = unsafe { info.si_addr() };
-    println!(
-        "Caught Zero-Division error at address {:p}, code {}",
-        addr, code
-    );
+// fn sigfpe_handler(_sig: i32, info: *mut libc::siginfo_t, _ucontext: *mut libc::c_void) {
+//     let info = unsafe { *info };
+//     let code = info.si_code;
+//     let addr = unsafe { info.si_addr() };
+//     println!(
+//         "Caught Zero-Division error at address {:p}, code {}",
+//         addr, code
+//     );
 
-    // Update the context to "skip" the faulting instruction
-    // This is actually, where the bug is introduced. Usually, the `div` instruction
-    // is 2 bytes long, but if its operand is the register of 64-bit size, the instruction is 3 bytes long (+REX prefix).
-    let ucontext = unsafe { &mut *(_ucontext as *mut libc::ucontext_t) };
-    ucontext.uc_mcontext.gregs[libc::REG_RIP as usize] += 2;
+//     // Update the context to "skip" the faulting instruction
+//     // This is actually, where the bug is introduced. Usually, the `div` instruction
+//     // is 2 bytes long, but if its operand is the register of 64-bit size, the instruction is 3 bytes long (+REX prefix).
+//     let ucontext = unsafe { &mut *(_ucontext as *mut libc::ucontext_t) };
+//     ucontext.uc_mcontext.gregs[libc::REG_RIP as usize] += 2;
 
-    // Set the result of the division to 0
-    // ucontext.uc_mcontext.gregs[libc::REG_RAX as usize] = 0;
-    // ucontext.uc_mcontext.gregs[libc::REG_RDX as usize] = 0;
-}
+//     // Set the result of the division to 0
+//     // ucontext.uc_mcontext.gregs[libc::REG_RAX as usize] = 0;
+//     // ucontext.uc_mcontext.gregs[libc::REG_RDX as usize] = 0;
+// }
 
-fn setup_sigfpe_handler() {
-    unsafe {
-        let mut sa: libc::sigaction = std::mem::zeroed();
-        sa.sa_flags = libc::SA_SIGINFO | libc::SA_NODEFER;
-        sa.sa_sigaction = sigfpe_handler as usize;
-        libc::sigaction(libc::SIGFPE, &sa, std::ptr::null_mut());
-    }
-}
+// fn setup_sigfpe_handler() {
+//     unsafe {
+//         let mut sa: libc::sigaction = std::mem::zeroed();
+//         sa.sa_flags = libc::SA_SIGINFO | libc::SA_NODEFER;
+//         sa.sa_sigaction = sigfpe_handler as usize;
+//         libc::sigaction(libc::SIGFPE, &sa, std::ptr::null_mut());
+//     }
+// }
 
 fn pretty_print_expr(
     tokens: &Vec<tokenizer::Token>,
@@ -89,7 +83,7 @@ fn pretty_print_expr(
 }
 
 fn main() {
-    setup_sigfpe_handler();
+    // setup_sigfpe_handler();
 
     println!("Welcome to the Calculator as a Service (CaaS)!");
     println!("Please enter an expression to evaluate:");
