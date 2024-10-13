@@ -15,6 +15,8 @@ pub struct Executable {
     pub eval_stack: Option<GuardedMmap>,
     // Mapping of variable names to their offsets in the variables area.
     pub variables_map: HashMap<String, usize>,
+    // SHA256 hash of the code.
+    pub integrity: Vec<u8>,
 }
 
 #[derive(Debug)]
@@ -32,11 +34,13 @@ impl Executable {
     /// # Arguments
     ///
     /// * `code_bytes` - The machine code to execute.
+    /// * `integrity` - The SHA256 hash of the code (calculated by the compiler).
+    /// * `variables_map` - Mapping of variable names to their offsets in the variables area.
     ///
     /// # Returns
     ///
     /// A new executable.
-    pub fn new(code_bytes: &[u8], variables_map: HashMap<String, usize>) -> Self {
+    pub fn new(code_bytes: &[u8], integrity: &[u8], variables_map: HashMap<String, usize>) -> Self {
         let mut code_page = GuardedMmap::new(code_bytes.len(), "code".to_string()).unwrap();
         unsafe {
             std::ptr::copy_nonoverlapping(
@@ -51,6 +55,7 @@ impl Executable {
             code: Some(code_page),
             eval_stack: Some(GuardedMmap::new(EVAL_STACK_SIZE, "eval_stack".to_string()).unwrap()),
             variables_map,
+            integrity: integrity.to_vec(),
         }
     }
 

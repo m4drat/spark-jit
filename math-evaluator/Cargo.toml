@@ -8,5 +8,7 @@ crate-type = ["cdylib", "lib", "staticlib"]
 
 [dependencies]
 ctor = "0.2.8"
+hex = "0.4.3"
 libc = "0.2.159"
+sha2 = "0.10.8"
 spark-jit = { path = "../spark-jit" }
