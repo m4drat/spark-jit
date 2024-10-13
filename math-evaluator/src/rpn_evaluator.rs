@@ -47,7 +47,7 @@ impl RpnEvaluator {
                         Plus => a + b,
                         Minus => a - b,
                         Mult => a * b,
-                        Div => unsafe { std::intrinsics::unchecked_div(a, b) },
+                        Div => a / b,
                         Pow => a.pow(b as u32),
                         _ => panic!("Unexpected binary operator"),
                     };

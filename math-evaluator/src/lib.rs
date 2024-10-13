@@ -1,5 +1,3 @@
-#![feature(core_intrinsics)]
-
 mod builtins;
 pub mod compiler;
 pub mod ffi;
