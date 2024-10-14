@@ -44,7 +44,7 @@ pub struct Compiler {
     integrity_hasher: sha2::Sha256,
 }
 
-// Macro that gets the size of the code before function and at the end of the function and updates the integrity hash.
+/// Macro that updates the integrity hash of the code generated within a block.
 macro_rules! with_integrity {
     ($self:ident, $codegen:ident, $block:block) => {
         let start = $codegen.code().len();
@@ -62,8 +62,13 @@ impl Compiler {
         }
     }
 
-    fn update_integrity(&mut self, data: &[u8]) {
-        self.integrity_hasher.update(data);
+    /// Update the integrity hash with the given code bytes.
+    ///
+    /// # Arguments
+    ///
+    /// * `code` - The code bytes to hash.
+    fn update_integrity(&mut self, code: &[u8]) {
+        self.integrity_hasher.update(code);
     }
 
     /// Push a value onto the evaluation stack.
