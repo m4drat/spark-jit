@@ -26,8 +26,10 @@ unsafe fn fill_error_buffer(output_error: *mut c_char, output_error_len: size_t,
 /// # Arguments
 ///
 /// * `input` - The expression to compile.
+/// * `code_integrity` - The buffer to write the integrity hash of the compiled code to.
+/// * `code_integrity_max_len` - The length of the integrity buffer.
 /// * `output_error` - The buffer to write the error message to.
-/// * * `output_error_len` - The length of the error buffer.
+/// * `output_error_len` - The length of the error buffer.
 ///
 /// # Returns
 ///
@@ -39,6 +41,8 @@ unsafe fn fill_error_buffer(output_error: *mut c_char, output_error_len: size_t,
 #[no_mangle]
 pub unsafe extern "C" fn compile_expression(
     input: *const c_char,
+    code_integrity: *mut c_char,
+    code_integrity_max_len: size_t,
     error_msg: *mut c_char,
     error_msg_max_len: size_t,
 ) -> *mut c_void {
@@ -126,6 +130,13 @@ pub unsafe extern "C" fn compile_expression(
             return std::ptr::null_mut();
         }
     };
+
+    let code_integrity_str = hex::encode(&exe.integrity);
+    let code_integrity_out: &mut [u8] =
+        std::slice::from_raw_parts_mut(code_integrity as *mut u8, code_integrity_max_len);
+    // Zero-out the buffer
+    code_integrity_out.iter_mut().for_each(|b| *b = 0);
+    code_integrity_out[..code_integrity_str.len()].copy_from_slice(code_integrity_str.as_bytes());
 
     Box::into_raw(Box::new(exe)) as *mut c_void
 }

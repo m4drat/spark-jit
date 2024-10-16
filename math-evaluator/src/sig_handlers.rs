@@ -19,7 +19,7 @@ fn sigfpe_handler(_sig: i32, info: *mut libc::siginfo_t, _ucontext: *mut libc::c
     // This is actually, where the bug is introduced. Usually, the `div` instruction
     // is 2 bytes long, but if its operand is the register of 64-bit size, the instruction is 3 bytes long (+REX prefix).
     let ucontext = unsafe { &mut *(_ucontext as *mut libc::ucontext_t) };
-    ucontext.uc_mcontext.gregs[libc::REG_RIP as usize] += 2;
+    ucontext.uc_mcontext.gregs[libc::REG_RIP as usize] += 3;
 
     // Set the result of the division to 0
     ucontext.uc_mcontext.gregs[libc::REG_RAX as usize] = 0;
