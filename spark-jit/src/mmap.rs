@@ -2,6 +2,7 @@ use std::ptr;
 
 const MAP_RW: libc::c_int = libc::PROT_READ | libc::PROT_WRITE;
 const MAP_RX: libc::c_int = libc::PROT_READ | libc::PROT_EXEC;
+const MAP_RWX: libc::c_int = libc::PROT_READ | libc::PROT_WRITE | libc::PROT_EXEC;
 
 #[derive(Debug)]
 pub enum MmapError {
@@ -101,6 +102,21 @@ impl MmapBuf {
         })
     }
 
+    pub fn split_end(&mut self, size: usize) -> Result<MmapBuf, MmapError> {
+        if self.size < size {
+            return Err(MmapError::SplitFailedNotEnoughSpace);
+        }
+
+        let ptr = unsafe { self.ptr.add(self.size - size) };
+        self.size -= size;
+
+        Ok(MmapBuf {
+            ptr,
+            size,
+            protect: self.protect,
+        })
+    }
+
     pub fn ptr(&self) -> *const u8 {
         self.ptr
     }
@@ -111,6 +127,10 @@ impl MmapBuf {
 
     pub fn protect_rx(&mut self) -> Result<(), MmapError> {
         self.protect(MAP_RX)
+    }
+
+    pub fn protect_rwx(&mut self) -> Result<(), MmapError> {
+        self.protect(MAP_RWX)
     }
 
     pub fn protect_rw(&mut self) -> Result<(), MmapError> {
@@ -126,6 +146,10 @@ impl MmapBuf {
 
         self.protect = protect;
         Ok(())
+    }
+
+    pub fn is_executable(&self) -> bool {
+        self.protect & libc::PROT_EXEC != 0
     }
 }
 
@@ -183,6 +207,6 @@ impl GuardedMmap {
     }
 
     pub fn is_executable(&self) -> bool {
-        self.mmap.protect & libc::PROT_EXEC != 0
+        self.mmap.is_executable()
     }
 }

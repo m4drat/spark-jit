@@ -127,6 +127,10 @@ fn main() {
             "{}",
             pretty_print_expr(&tokens, &variables, result_compiled)
         );
+
+        if tokenizer.get_variables().is_empty() {
+            unsafe { libc::getchar() };
+        }
     }
 
     // if result_interpreter != result_compiled {
