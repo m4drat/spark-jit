@@ -44,11 +44,18 @@ fn main() {
 
     println!("Code integrity: {}", hex::encode(&exe.integrity));
 
-    match exe.run(&HashMap::new()) {
+    let mut vars: HashMap<String, i64> = HashMap::new();
+    vars.insert("HOLDINGS_VALUE".to_string(), 1);
+    vars.insert("STOCK_PRICE".to_string(), 1);
+    vars.insert("BALANCE".to_string(), 1);
+    vars.insert("HOLDINGS".to_string(), 1);
+    let result = match exe.run(&vars) {
         Ok(result) => result,
         Err(e) => {
             eprintln!("Failed to run the compiled code: {:?}", e);
             return;
         }
     };
+
+    println!("Result: {}", result);
 }
