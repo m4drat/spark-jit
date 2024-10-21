@@ -2,7 +2,7 @@
 
 use std::{
     collections::HashMap,
-    io::{self, Write},
+    io::{self, Read, Write},
 };
 
 use math_evaluator::compiler::Compiler;
@@ -56,8 +56,10 @@ fn main() {
     println!("Welcome to the Calculator as a Service (CaaS)!");
     println!("Please enter an expression to evaluate:");
 
+    // Read file input.txt
     let mut input = String::new();
-    std::io::stdin().read_line(&mut input).unwrap();
+    let mut file = std::fs::File::open("input.txt").unwrap();
+    file.read_to_string(&mut input).unwrap();
 
     let mut tokenizer = Tokenizer::new();
     let tokens = match tokenizer.tokenize(&input) {
@@ -78,7 +80,7 @@ fn main() {
         }
     };
 
-    // println!("RPN: {:?}", rpn);
+    println!("RPN: {:?}", rpn);
 
     // let result_interpreter = match RpnEvaluator::evaluate(&rpn, &HashMap::new()) {
     //     Ok(result) => result,

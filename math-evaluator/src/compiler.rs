@@ -296,6 +296,8 @@ impl Compiler {
         // codegen.dump_generated_code(exec.code.as_ref().unwrap().ptr() as u64);
         // println!("Integrity hash: {}", hex::encode(&exec.integrity));
 
+        println!("Code loaded at: {:p}", exec.code.as_ref().unwrap().ptr());
+
         Ok(exec)
     }
 }
